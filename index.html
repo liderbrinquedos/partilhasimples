@@ -17,27 +17,27 @@
     <div class="w-full max-w-4xl bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden p-6 sm:p-8">
         <header class="mb-8 border-b border-slate-700 pb-4">
             <h1 class="text-2xl sm:text-3xl font-bold text-cyan-400 tracking-tight">Calculadora de Partilha do Simples Nacional</h1>
-            <p class="text-slate-400 text-sm mt-1">Automatize o cálculo de alíquotas efetivas, imposto total e partilha por tributo (Padrão Sankhya OM / PGDAS-D).</p>
+            <p class="text-slate-400 text-sm mt-1">Alíquota efetiva, imposto total do mês e partilha por tributo do <strong class="text-slate-300 font-semibold">Anexo II - Indústria</strong> (Padrão Sankhya OM / PGDAS-D).</p>
         </header>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <!-- Anexo Selector -->
+            <!-- Anexo (fixo nesta versao) -->
             <div>
                 <label class="block text-sm font-medium text-slate-300 mb-2">Anexo do Simples Nacional</label>
-                <select id="anexoSelect" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:outline-none focus:border-cyan-500 transition">
-                    <option value="II" selected>Anexo II - Indústria</option>
-                    <option value="I">Anexo I - Comércio</option>
-                    <option value="III">Anexo III - Serviços</option>
-                </select>
+                <div class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 flex items-center justify-between">
+                    <span>Anexo II - Indústria</span>
+                    <span class="text-xs text-slate-500">LC 123/2006</span>
+                </div>
             </div>
 
             <!-- RBT12 Input -->
             <div>
-                <label class="block text-sm font-medium text-slate-300 mb-2">Receita Acumulada (RBT12 - 12m)</label>
+                <label class="block text-sm font-medium text-slate-300 mb-2">RBT12 (12 meses anteriores)</label>
                 <div class="relative">
                     <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">R$</span>
                     <input type="text" id="rbt12Input" placeholder="2.779.186,10" value="2.779.186,10" class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 p-3 text-slate-100 focus:outline-none focus:border-cyan-500 transition">
                 </div>
+                <p class="text-xs text-slate-500 mt-1">Define a faixa. Não inclui o mês em apuração (art. 18, §1º).</p>
             </div>
 
             <!-- Current Month Revenue Input -->
@@ -47,6 +47,7 @@
                     <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">R$</span>
                     <input type="text" id="mesInput" placeholder="145.288,45" value="145.288,45" class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 p-3 text-slate-100 focus:outline-none focus:border-cyan-500 transition">
                 </div>
+                <p class="text-xs text-slate-500 mt-1">Base de cálculo do mês. Não altera a faixa.</p>
             </div>
         </div>
 
@@ -54,6 +55,27 @@
             <button onclick="calcularSimples()" class="bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-semibold px-6 py-3 rounded-lg shadow-lg transition duration-200 w-full md:w-auto">
                 Calcular Partilha
             </button>
+        </div>
+
+        <!-- Avisos legais -->
+        <div id="avisoIcmsWrap" class="hidden mb-6">
+            <div class="flex items-start gap-3 bg-amber-500/10 border border-amber-500/40 rounded-xl p-4 text-sm text-amber-200">
+                <span class="font-bold shrink-0">!</span>
+                <p>RBT12 acima de <strong>R$ 3.600.000,00</strong>: o ICMS (e o ISS) deixam de integrar o DAS e passam a ser recolhidos no regime normal — art. 13-A da LC 123/2006. Por isso a partilha abaixo mostra ICMS 0,00%.</p>
+            </div>
+        </div>
+
+        <div id="avisoExcessoWrap" class="hidden mb-6">
+            <div class="flex items-start gap-3 bg-rose-500/10 border border-rose-500/40 rounded-xl p-4 text-sm text-rose-200">
+                <span class="font-bold shrink-0">!</span>
+                <p id="avisoExcessoTexto"></p>
+            </div>
+        </div>
+
+        <div id="alertaFaixaWrap" class="hidden mb-6">
+            <div class="flex items-center gap-2 bg-cyan-500/10 border border-cyan-500/40 rounded-xl p-3 text-sm text-cyan-200">
+                <span id="alertaFaixaTexto"></span>
+            </div>
         </div>
 
         <div id="summaryCards" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 hidden">
@@ -73,6 +95,9 @@
 
         <div id="resultsContainer" class="hidden">
             <h3 class="text-lg font-semibold text-slate-200 mb-4">Tabela de Repartição (Pronta para Sankhya / PGDAS-D)</h3>
+            <div id="notaExcesso" class="hidden mb-4 bg-rose-500/10 border border-rose-500/40 rounded-xl p-4 text-sm text-rose-200">
+                Valores de referência: com RBT12 acima de R$ 4.800.000,00 a empresa está em excesso do limite do Simples e a parcela excedente é tributada pelas alíquotas máximas do Anexo acrescidas de 20% (art. 18, §§16 e 16-A).
+            </div>
             <div class="overflow-x-auto rounded-xl border border-slate-700">
                 <table class="w-full text-left border-collapse">
                     <thead>
@@ -92,14 +117,19 @@
     </div>
 
     <script>
-        // Tabelas oficiais simplificadas do Anexo II (Indústria) LC 123/2006
+        // Tabelas oficiais do Anexo II (Industria) - LC 123/2006, redacao da LC 155/2016 (vigencia 01/01/2018)
+        const LIMITE_ICMS_ISS = 3600000.00; // art. 13-A: ICMS/ISS saem do DAS
+        const LIMITE_SIMPLES = 4800000.00;  // art. 3o, II: limite da EPP no Simples
+        const LIMITE_TOLERANCIA = LIMITE_SIMPLES * 1.20; // art. 3o, 9o-A: tolerancia de 20%
+
+        // Aliquotas nominais + parcela a deduzir + percentual de reparticao (Anexo II)
         const faixasAnexoII = [
-            { faixa: 1, limite: 180000.00, nominal: 0.045, deducao: 0, reparticao: { irpj: 0.055, csll: 0.035, cofinss: 0.125, pis: 0.027, cpp: 0.315, icms: 0.320, ipi: 0.123, iss: 0.000 } },
-            { faixa: 2, limite: 360000.00, nominal: 0.078, deducao: 5940.00, reparticao: { irpj: 0.055, csll: 0.035, cofinss: 0.127, pis: 0.027, cpp: 0.315, icms: 0.318, ipi: 0.123, iss: 0.000 } },
-            { faixa: 3, limite: 720000.00, nominal: 0.100, deducao: 13860.00, reparticao: { irpj: 0.055, csll: 0.035, cofinss: 0.127, pis: 0.027, cpp: 0.315, icms: 0.318, ipi: 0.123, iss: 0.000 } },
-            { faixa: 4, limite: 1800000.00, nominal: 0.112, deducao: 22500.00, reparticao: { irpj: 0.055, csll: 0.035, cofinss: 0.127, pis: 0.027, cpp: 0.315, icms: 0.318, ipi: 0.123, iss: 0.000 } },
-            { faixa: 5, limite: 3600000.00, nominal: 0.147, deducao: 85500.00, reparticao: { irpj: 0.055, csll: 0.04068, cofinss: 0.13379, pis: 0.02894, cpp: 0.43588, icms: 0.37195, ipi: 0.08718, iss: 0.000 } }, // Ajustado para refletir a proporção exata da tela informada
-            { faixa: 6, limite: 4800000.00, nominal: 0.300, deducao: 720000.00, reparticao: { irpj: 0.130, csll: 0.090, cofinss: 0.280, pis: 0.060, cpp: 0.440, icms: 0.000, ipi: 0.000, iss: 0.000 } }
+            { faixa: 1, limite: 180000.00, nominal: 0.045, deducao: 0, reparticao: { irpj: 0.055, csll: 0.035, cofins: 0.1151, pis: 0.0249, cpp: 0.375, ipi: 0.075, icms: 0.320 } },
+            { faixa: 2, limite: 360000.00, nominal: 0.078, deducao: 5940.00, reparticao: { irpj: 0.055, csll: 0.035, cofins: 0.1151, pis: 0.0249, cpp: 0.375, ipi: 0.075, icms: 0.320 } },
+            { faixa: 3, limite: 720000.00, nominal: 0.100, deducao: 13860.00, reparticao: { irpj: 0.055, csll: 0.035, cofins: 0.1151, pis: 0.0249, cpp: 0.375, ipi: 0.075, icms: 0.320 } },
+            { faixa: 4, limite: 1800000.00, nominal: 0.112, deducao: 22500.00, reparticao: { irpj: 0.055, csll: 0.035, cofins: 0.1151, pis: 0.0249, cpp: 0.375, ipi: 0.075, icms: 0.320 } },
+            { faixa: 5, limite: 3600000.00, nominal: 0.147, deducao: 85500.00, reparticao: { irpj: 0.055, csll: 0.035, cofins: 0.1151, pis: 0.0249, cpp: 0.375, ipi: 0.075, icms: 0.320 } },
+            { faixa: 6, limite: 4800000.00, nominal: 0.300, deducao: 720000.00, reparticao: { irpj: 0.085, csll: 0.075, cofins: 0.2096, pis: 0.0454, cpp: 0.235, ipi: 0.350, icms: 0.000 } }
         ];
 
         // Formatador para moeda brasileira
@@ -114,6 +144,12 @@
             return parseFloat(limpo) || 0;
         }
 
+        let ultimaFaixa = null;
+
+        function alternar(id, visivel) {
+            document.getElementById(id).classList.toggle('hidden', !visivel);
+        }
+
         function calcularSimples() {
             const rbt12 = parseMoeda(document.getElementById('rbt12Input').value);
             const receitaMes = parseMoeda(document.getElementById('mesInput').value);
@@ -123,7 +159,7 @@
                 return;
             }
 
-            // Descobrir a faixa correspondente
+            // Descobrir a faixa correspondente (a faixa depende apenas do RBT12)
             let faixaObj = faixasAnexoII[faixasAnexoII.length - 1];
             for (let f of faixasAnexoII) {
                 if (rbt12 <= f.limite) {
@@ -132,17 +168,41 @@
                 }
             }
 
-            // Cálculo da Alíquota Efetiva = ((RBT12 * Aliquota Nominal) - Parcela a Deduzir) / RBT12
+            const emExcesso = rbt12 > LIMITE_SIMPLES;
+
+            // Aliquota Efetiva = ((RBT12 * Aliquota Nominal) - Parcela a Deduzir) / RBT12 (art. 18, 1o-A)
             let aliquotaEfetiva = ((rbt12 * faixaObj.nominal) - faixaObj.deducao) / rbt12;
             if (aliquotaEfetiva < 0) aliquotaEfetiva = 0;
 
-            let totalImposto = receitaMes * aliquotaEfetiva;
+            const totalImposto = receitaMes * aliquotaEfetiva;
 
-            // Exibir cartões de resumo
+            // Avisos legais
+            alternar('avisoIcmsWrap', rbt12 > LIMITE_ICMS_ISS);
+            if (emExcesso) {
+                document.getElementById('avisoExcessoTexto').innerText = (rbt12 <= LIMITE_TOLERANCIA)
+                    ? `RBT12 de ${formatarMoeda(rbt12)} acima de ${formatarMoeda(LIMITE_SIMPLES)} (excesso de até 20% do limite): a exclusão do Simples só produz efeitos no ano-calendário seguinte (art. 3º, §9º-A). Neste mês a parcela excedente é tributada pela alíquota máxima do Anexo acrescida de 20% (art. 18, §§16 e 16-A).`
+                    : `RBT12 de ${formatarMoeda(rbt12)} acima de ${formatarMoeda(LIMITE_TOLERANCIA)} (limite + 20%): a empresa fica excluída do Simples no mês subsequente ao do excesso (art. 3º, §9º). Não use este resultado como DAS devido.`;
+            }
+            alternar('avisoExcessoWrap', emExcesso);
+            alternar('notaExcesso', emExcesso);
+
+            // Destaque quando a faixa muda de uma calculacao para a outra
+            if (ultimaFaixa !== null && ultimaFaixa !== faixaObj.faixa) {
+                document.getElementById('alertaFaixaTexto').innerText =
+                    `Faixa alterada: da ${ultimaFaixa}ª para a ${faixaObj.faixa}ª (o RBT12 mudou de faixa).`;
+                alternar('alertaFaixaWrap', true);
+            } else {
+                alternar('alertaFaixaWrap', false);
+            }
+            ultimaFaixa = faixaObj.faixa;
+
+            // Exibir cartoes de resumo
             document.getElementById('summaryCards').classList.remove('hidden');
             document.getElementById('resultsContainer').classList.remove('hidden');
 
-            document.getElementById('resFaixa').innerText = `${faixaObj.faixa}ª Faixa (Até ${formatarMoeda(faixaObj.limite)})`;
+            document.getElementById('resFaixa').innerText = emExcesso
+                ? `Excesso do limite (art. 3º, §9º)`
+                : `${faixaObj.faixa}ª Faixa (Até ${formatarMoeda(faixaObj.limite)})`;
             document.getElementById('resAliqEfetiva').innerText = (aliquotaEfetiva * 100).toFixed(5).replace('.', ',') + '%';
             document.getElementById('resTotalImposto').innerText = formatarMoeda(totalImposto);
 
@@ -153,29 +213,40 @@
             const tributosNomes = {
                 irpj: 'IRPJ',
                 csll: 'CSLL',
-                cofinss: 'COFINS',
+                cofins: 'COFINS',
                 pis: 'PIS/PASEP',
                 cpp: 'CPP',
-                icms: 'ICMS',
                 ipi: 'IPI',
-                iss: 'ISS'
+                icms: 'ICMS'
             };
 
-            for (let key in faixaObj.reparticao) {
-                let percReparticao = faixaObj.reparticao[key];
-                let percFinal = aliquotaEfetiva * percReparticao; // em decimal
-                let percFinalPercentual = percFinal * 100;
-                let valorTributo = receitaMes * percFinal;
+            let somaReparticao = 0;
 
-                let tr = document.createElement('tr');
+            for (let key in faixaObj.reparticao) {
+                const percReparticao = faixaObj.reparticao[key];
+                const percFinal = aliquotaEfetiva * percReparticao;
+                const valorTributo = receitaMes * percFinal;
+                somaReparticao += percReparticao;
+
+                const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td class="p-3 font-medium text-slate-200">${tributosNomes[key]}</td>
                     <td class="p-3 text-right text-slate-400"> ${(percReparticao * 100).toFixed(2).replace('.', ',')}%</td>
-                    <td class="p-3 text-right font-mono text-cyan-300">${percFinalPercentual.toFixed(5).replace('.', ',')}%</td>
+                    <td class="p-3 text-right font-mono text-cyan-300">${(percFinal * 100).toFixed(5).replace('.', ',')}%</td>
                     <td class="p-3 text-right font-mono text-emerald-300">${formatarMoeda(valorTributo)}</td>
                 `;
                 tbody.appendChild(tr);
             }
+
+            const trTotal = document.createElement('tr');
+            trTotal.className = 'bg-slate-900/60 font-semibold';
+            trTotal.innerHTML = `
+                <td class="p-3 text-slate-200">Total</td>
+                <td class="p-3 text-right text-slate-300">${(somaReparticao * 100).toFixed(2).replace('.', ',')}%</td>
+                <td class="p-3 text-right font-mono text-cyan-200">${(aliquotaEfetiva * 100).toFixed(5).replace('.', ',')}%</td>
+                <td class="p-3 text-right font-mono text-emerald-200">${formatarMoeda(totalImposto)}</td>
+            `;
+            tbody.appendChild(trTotal);
         }
 
         // Executar cálculo inicial ao carregar a página com os valores padrão
