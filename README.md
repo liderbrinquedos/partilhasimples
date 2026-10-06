@@ -24,6 +24,39 @@ do Sankhya OM / PGDAS-D.
 
 A página já executa um cálculo de exemplo ao carregar.
 
+## Tabelas do Anexo II - Indústria (LC 123/2006)
+
+### 1. Faixas, alíquota nominal e parcela a deduzir
+
+| Faixa | Receita Bruta em 12 Meses (RBT12) | Alíquota Nominal | Parcela a Deduzir (R$) |
+|-------|-----------------------------------|------------------|------------------------|
+| 1ª | Até 180.000,00 | 4,50% | - |
+| 2ª | De 180.000,01 a 360.000,00 | 7,80% | 5.940,00 |
+| 3ª | De 360.000,01 a 720.000,00 | 10,00% | 13.860,00 |
+| 4ª | De 720.000,01 a 1.800.000,00 | 11,20% | 22.500,00 |
+| 5ª | De 1.800.000,01 a 3.600.000,00 | 14,70% | 85.500,00 |
+| 6ª | De 3.600.000,01 a 4.800.000,00 | 30,00% | 720.000,00 |
+
+### 2. Percentual de repartição dos tributos (% do DAS)
+
+| Faixa | IRPJ | CSLL | COFINS | PIS/PASEP | CPP | IPI | ICMS | Total |
+|-------|------|------|--------|-----------|-----|-----|------|-------|
+| 1ª a 5ª | 5,50% | 3,50% | 11,51% | 2,49% | 37,50% | 7,50% | 32,00% | 100,00% |
+| 6ª | 8,50% | 7,50% | 20,96% | 4,54% | 23,50% | 35,00% | 0,00% | 100,00% |
+
+Na 6ª faixa (RBT12 acima de R$ 3.600.000,00) o ICMS não integra o DAS — art. 13-A.
+
+### 3. Fórmulas (art. 18 da LC 123/2006)
+
+```
+Alíquota efetiva = (RBT12 × Alíquota nominal − Parcela a deduzir) / RBT12
+Imposto do mês   = Faturamento do mês × Alíquota efetiva
+Tributo          = Faturamento do mês × Alíquota efetiva × % de repartição
+```
+
+A faixa é escolhida pelo **RBT12**, que considera os 12 meses anteriores ao mês de
+apuração (art. 18, §1º).
+
 ## Estrutura
 
 ```
